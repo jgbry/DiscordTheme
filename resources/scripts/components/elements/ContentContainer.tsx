@@ -4,7 +4,7 @@ import tw from 'twin.macro';
 
 const ContentContainer = styled.div`
     max-width: 1200px;
-    ${tw`mx-4`};
+    ${tw`mx-4 py-4`};
 
     ${breakpoint('xl')`
         ${tw`mx-auto`};

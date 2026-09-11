@@ -25,6 +25,7 @@ use Pterodactyl\Exceptions\Http\Server\ServerStateConflictException;
  * @property int $node_id
  * @property string $name
  * @property string $description
+ * @property string|null $icon
  * @property string|null $status
  * @property bool $skip_scripts
  * @property int $owner_id
@@ -156,6 +157,7 @@ class Server extends Model implements Identifiable
         'name' => 'required|string|min:1|max:191',
         'node_id' => 'required|exists:nodes,id',
         'description' => 'string',
+        'icon' => 'nullable|string|max:2048',
         'status' => 'nullable|string',
         'memory' => 'required|numeric|min:0',
         'swap' => 'required|numeric|min:-1',

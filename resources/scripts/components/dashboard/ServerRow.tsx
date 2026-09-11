@@ -17,21 +17,23 @@ const isAlarmState = (current: number, limit: number): boolean => limit > 0 && c
 
 const Icon = memo(
     styled(FontAwesomeIcon)<{ $alarm: boolean }>`
-        ${(props) => (props.$alarm ? tw`text-red-400` : tw`text-neutral-500`)};
+        ${(props) => (props.$alarm ? tw`text-red-400` : `color: #949ba4;`)};
     `,
     isEqual
 );
 
 const IconDescription = styled.p<{ $alarm: boolean }>`
     ${tw`text-sm ml-2`};
-    ${(props) => (props.$alarm ? tw`text-white` : tw`text-neutral-400`)};
+    ${(props) => (props.$alarm ? tw`text-white` : `color: #dbdee1;`)};
 `;
 
-const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | undefined }>`
+const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | undefined; $editMode?: boolean }>`
     ${tw`grid grid-cols-12 gap-4 relative`};
 
+    ${(props) => props.$editMode && tw`cursor-default`};
+
     & .status-bar {
-        ${tw`w-2 bg-red-500 absolute right-0 z-20 rounded-full m-1 opacity-50 transition-all duration-150`};
+        ${tw`w-2 absolute right-0 z-20 rounded-full m-1 opacity-60 transition-all duration-150`};
         height: calc(100% - 0.5rem);
 
         ${({ $status }) =>
@@ -43,13 +45,52 @@ const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | unde
     }
 
     &:hover .status-bar {
-        ${tw`opacity-75`};
+        ${tw`opacity-90`};
+    }
+
+    &.is-dragging {
+        opacity: 0.5;
+        border-color: #5865f2;
+    }
+
+    .admin-variant-handle {
+        ${tw`flex items-center justify-center mr-3 px-1 cursor-move select-none rounded`};
+        color: #949ba4;
+        font-size: 0.85rem;
+        letter-spacing: -0.15em;
+        line-height: 1;
+        touch-action: none;
+
+        &:hover {
+            color: #dbdee1;
+            background-color: #404249;
+        }
     }
 `;
 
 type Timer = ReturnType<typeof setInterval>;
 
-export default ({ server, className }: { server: Server; className?: string }) => {
+type Props = {
+    server: Server;
+    className?: string;
+    editMode?: boolean;
+    isDragging?: boolean;
+    onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+    onDragEnd?: (event: React.DragEvent<HTMLElement>) => void;
+    onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+    onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+};
+
+export default ({
+    server,
+    className,
+    editMode = false,
+    isDragging = false,
+    onDragStart,
+    onDragEnd,
+    onDragOver,
+    onDrop,
+}: Props) => {
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
     const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
     const [stats, setStats] = useState<ServerStats | null>(null);
@@ -66,7 +107,7 @@ export default ({ server, className }: { server: Server; className?: string }) =
     useEffect(() => {
         // Don't waste a HTTP request if there is nothing important to show to the user because
         // the server is suspended.
-        if (isSuspended || server.isNodeUnderMaintenance) return;
+        if (isSuspended) return;
 
         getStats().then(() => {
             interval.current = setInterval(() => getStats(), 30000);
@@ -75,7 +116,7 @@ export default ({ server, className }: { server: Server; className?: string }) =
         return () => {
             interval.current && clearInterval(interval.current);
         };
-    }, [isSuspended, server.isNodeUnderMaintenance]);
+    }, [isSuspended]);
 
     const alarms = { cpu: false, memory: false, disk: false };
     if (stats) {
@@ -88,23 +129,59 @@ export default ({ server, className }: { server: Server; className?: string }) =
     const memoryLimit = server.limits.memory !== 0 ? bytesToString(mbToBytes(server.limits.memory)) : 'Unlimited';
     const cpuLimit = server.limits.cpu !== 0 ? server.limits.cpu + ' %' : 'Unlimited';
 
-    return (
-        <StatusIndicatorBox as={Link} to={`/server/${server.id}`} className={className} $status={stats?.status}>
+    const rowClassName = [className, isDragging ? 'is-dragging' : undefined].filter(Boolean).join(' ') || undefined;
+
+    const content = (
+        <>
             <div css={tw`flex items-center col-span-12 sm:col-span-5 lg:col-span-6`}>
+                {editMode && (
+                    <span
+                        className={'admin-variant-handle'}
+                        role={'button'}
+                        tabIndex={0}
+                        draggable={true}
+                        aria-label={`Reorder ${server.name}`}
+                        title={'Drag to reorder'}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }}
+                        onDragStart={(event) => {
+                            event.stopPropagation();
+                            event.dataTransfer.effectAllowed = 'move';
+                            event.dataTransfer.setData('text/plain', server.uuid);
+                            onDragStart?.(event);
+                        }}
+                        onDragEnd={(event) => {
+                            event.stopPropagation();
+                            onDragEnd?.(event);
+                        }}
+                    >
+                        <span aria-hidden={'true'}>⋮⋮</span>
+                    </span>
+                )}
                 <div className={'icon mr-4'}>
-                    <FontAwesomeIcon icon={faServer} />
+                    {server.icon ? (
+                        <img src={server.icon} alt={server.name} />
+                    ) : (
+                        <FontAwesomeIcon icon={faServer} />
+                    )}
                 </div>
                 <div>
-                    <p css={tw`text-lg break-words`}>{server.name}</p>
+                    <p css={tw`text-lg break-words`} style={{ color: '#f2f3f5' }}>
+                        {server.name}
+                    </p>
                     {!!server.description && (
-                        <p css={tw`text-sm text-neutral-300 break-words line-clamp-2`}>{server.description}</p>
+                        <p css={tw`text-sm break-words line-clamp-2`} style={{ color: '#949ba4' }}>
+                            {server.description}
+                        </p>
                     )}
                 </div>
             </div>
             <div css={tw`flex-1 ml-4 lg:block lg:col-span-2 hidden`}>
                 <div css={tw`flex justify-center`}>
-                    <FontAwesomeIcon icon={faEthernet} css={tw`text-neutral-500`} />
-                    <p css={tw`text-sm text-neutral-400 ml-2`}>
+                    <FontAwesomeIcon icon={faEthernet} style={{ color: '#949ba4' }} />
+                    <p css={tw`text-sm ml-2`} style={{ color: '#b5bac1' }}>
                         {server.allocations
                             .filter((alloc) => alloc.isDefault)
                             .map((allocation) => (
@@ -116,22 +193,19 @@ export default ({ server, className }: { server: Server; className?: string }) =
                 </div>
             </div>
             <div css={tw`hidden col-span-7 lg:col-span-4 sm:flex items-baseline justify-center`}>
-                {!stats || isSuspended || server.isNodeUnderMaintenance ? (
+                {!stats || isSuspended ? (
                     isSuspended ? (
                         <div css={tw`flex-1 text-center`}>
                             <span css={tw`bg-red-500 rounded px-2 py-1 text-red-100 text-xs`}>
                                 {server.status === 'suspended' ? 'Suspended' : 'Connection Error'}
                             </span>
                         </div>
-                    ) : server.isNodeUnderMaintenance ? (
-                        <div css={tw`flex-1 text-center`}>
-                            <span css={tw`bg-yellow-500 rounded px-2 py-1 text-yellow-100 text-xs`}>
-                                Under Maintenance
-                            </span>
-                        </div>
                     ) : server.isTransferring || server.status ? (
                         <div css={tw`flex-1 text-center`}>
-                            <span css={tw`bg-neutral-500 rounded px-2 py-1 text-neutral-100 text-xs`}>
+                            <span
+                                css={tw`rounded px-2 py-1 text-xs`}
+                                style={{ backgroundColor: '#404249', color: '#dbdee1' }}
+                            >
                                 {server.isTransferring
                                     ? 'Transferring'
                                     : server.status === 'installing'
@@ -153,7 +227,9 @@ export default ({ server, className }: { server: Server; className?: string }) =
                                     {stats.cpuUsagePercent.toFixed(2)} %
                                 </IconDescription>
                             </div>
-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {cpuLimit}</p>
+                            <p css={tw`text-xs text-center mt-1`} style={{ color: '#6d6f78' }}>
+                                of {cpuLimit}
+                            </p>
                         </div>
                         <div css={tw`flex-1 ml-4 sm:block hidden`}>
                             <div css={tw`flex justify-center`}>
@@ -162,7 +238,9 @@ export default ({ server, className }: { server: Server; className?: string }) =
                                     {bytesToString(stats.memoryUsageInBytes)}
                                 </IconDescription>
                             </div>
-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {memoryLimit}</p>
+                            <p css={tw`text-xs text-center mt-1`} style={{ color: '#6d6f78' }}>
+                                of {memoryLimit}
+                            </p>
                         </div>
                         <div css={tw`flex-1 ml-4 sm:block hidden`}>
                             <div css={tw`flex justify-center`}>
@@ -171,12 +249,40 @@ export default ({ server, className }: { server: Server; className?: string }) =
                                     {bytesToString(stats.diskUsageInBytes)}
                                 </IconDescription>
                             </div>
-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {diskLimit}</p>
+                            <p css={tw`text-xs text-center mt-1`} style={{ color: '#6d6f78' }}>
+                                of {diskLimit}
+                            </p>
                         </div>
                     </React.Fragment>
                 )}
             </div>
             <div className={'status-bar'} />
+        </>
+    );
+
+    if (editMode) {
+        return (
+            <StatusIndicatorBox
+                className={rowClassName}
+                $status={stats?.status}
+                $editMode={true}
+                $hoverable={false}
+                onDragOver={onDragOver}
+                onDragOverCapture={onDragOver}
+                onDrop={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDrop?.(event);
+                }}
+            >
+                {content}
+            </StatusIndicatorBox>
+        );
+    }
+
+    return (
+        <StatusIndicatorBox as={Link} to={`/server/${server.id}`} className={rowClassName} $status={stats?.status}>
+            {content}
         </StatusIndicatorBox>
     );
 };

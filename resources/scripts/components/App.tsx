@@ -14,6 +14,9 @@ import AuthenticatedRoute from '@/components/elements/AuthenticatedRoute';
 import { ServerContext } from '@/state/server';
 import '@/assets/tailwind.css';
 import Spinner from '@/components/elements/Spinner';
+import AuthenticatedShell from '@/components/layout/AuthenticatedShell';
+import ChannelSidebar from '@/components/layout/ChannelSidebar';
+import MainPane from '@/components/layout/MainPane';
 
 const DashboardRouter = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/routers/DashboardRouter'));
 const ServerRouter = lazy(() => import(/* webpackChunkName: "server" */ '@/routers/ServerRouter'));
@@ -29,6 +32,7 @@ interface ExtendedWindow extends Window {
         root_admin: boolean;
         use_totp: boolean;
         language: string;
+        server_order?: string[] | null;
         updated_at: string;
         created_at: string;
         /* eslint-enable camelcase */
@@ -47,6 +51,7 @@ const App = () => {
             language: PterodactylUser.language,
             rootAdmin: PterodactylUser.root_admin,
             useTotp: PterodactylUser.use_totp,
+            serverOrder: Array.isArray(PterodactylUser.server_order) ? PterodactylUser.server_order : [],
             createdAt: new Date(PterodactylUser.created_at),
             updatedAt: new Date(PterodactylUser.updated_at),
         });
@@ -61,7 +66,7 @@ const App = () => {
             <GlobalStylesheet />
             <StoreProvider store={store}>
                 <ProgressBar />
-                <div css={tw`mx-auto w-auto`}>
+                <div css={tw`w-full`}>
                     <Router history={history}>
                         <Switch>
                             <Route path={'/auth'}>
@@ -69,16 +74,30 @@ const App = () => {
                                     <AuthenticationRouter />
                                 </Spinner.Suspense>
                             </Route>
-                            <AuthenticatedRoute path={'/server/:id'}>
-                                <Spinner.Suspense>
-                                    <ServerContext.Provider>
-                                        <ServerRouter />
-                                    </ServerContext.Provider>
-                                </Spinner.Suspense>
-                            </AuthenticatedRoute>
                             <AuthenticatedRoute path={'/'}>
                                 <Spinner.Suspense>
-                                    <DashboardRouter />
+                                    <AuthenticatedShell>
+                                        <Switch>
+                                            <Route path={'/server/:id'}>
+                                                <ServerContext.Provider>
+                                                    <>
+                                                        <ChannelSidebar />
+                                                        <MainPane>
+                                                            <ServerRouter />
+                                                        </MainPane>
+                                                    </>
+                                                </ServerContext.Provider>
+                                            </Route>
+                                            <Route path={'/'}>
+                                                <>
+                                                    <ChannelSidebar />
+                                                    <MainPane>
+                                                        <DashboardRouter />
+                                                    </MainPane>
+                                                </>
+                                            </Route>
+                                        </Switch>
+                                    </AuthenticatedShell>
                                 </Spinner.Suspense>
                             </AuthenticatedRoute>
                             <Route path={'*'}>

@@ -14,7 +14,8 @@ export default createGlobalStyle`
     }
 
     body {
-        ${tw`font-sans bg-neutral-800 text-neutral-200`};
+        ${tw`font-sans text-neutral-200`};
+        background-color: #313338;
         letter-spacing: 0.015em;
     }
 

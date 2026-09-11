@@ -33,6 +33,9 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
         ->name('api:client.account.update-email');
     Route::put('/password', [Client\AccountController::class, 'updatePassword'])->name('api:client.account.update-password');
 
+    Route::get('/server-order', [Client\AccountController::class, 'serverOrder']);
+    Route::put('/server-order', [Client\AccountController::class, 'updateServerOrder']);
+
     Route::get('/activity', Client\ActivityLogController::class)->name('api:client.account.activity');
 
     Route::get('/api-keys', [Client\ApiKeyController::class, 'index']);
@@ -149,5 +152,7 @@ Route::group([
         Route::post('/rename', [Client\Servers\SettingsController::class, 'rename']);
         Route::post('/reinstall', [Client\Servers\SettingsController::class, 'reinstall']);
         Route::put('/docker-image', [Client\Servers\SettingsController::class, 'dockerImage']);
+        Route::post('/icon', [Client\Servers\SettingsController::class, 'updateIcon']);
+        Route::delete('/icon', [Client\Servers\SettingsController::class, 'deleteIcon']);
     });
 });

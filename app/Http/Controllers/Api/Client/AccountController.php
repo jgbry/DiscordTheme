@@ -12,6 +12,7 @@ use Pterodactyl\Services\Users\UserUpdateService;
 use Pterodactyl\Transformers\Api\Client\AccountTransformer;
 use Pterodactyl\Http\Requests\Api\Client\Account\UpdateEmailRequest;
 use Pterodactyl\Http\Requests\Api\Client\Account\UpdatePasswordRequest;
+use Pterodactyl\Http\Requests\Api\Client\Account\UpdateServerOrderRequest;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class AccountController extends ClientApiController
@@ -61,6 +62,65 @@ class AccountController extends ClientApiController
         }
 
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Return the authenticated user's preferred server display order.
+     */
+    public function serverOrder(Request $request): JsonResponse
+    {
+        $raw = \Illuminate\Support\Facades\DB::table('users')
+            ->where('id', $request->user()->id)
+            ->value('server_order');
+
+        return new JsonResponse([
+            'object' => 'server_order',
+            'attributes' => [
+                'order' => $this->decodeServerOrder($raw),
+            ],
+        ]);
+    }
+
+    /**
+     * Update the authenticated user's preferred server display order.
+     */
+    public function updateServerOrder(UpdateServerOrderRequest $request): JsonResponse
+    {
+        $order = array_values(array_unique(array_map('strval', $request->input('order', []))));
+
+        \Illuminate\Support\Facades\DB::table('users')
+            ->where('id', $request->user()->id)
+            ->update([
+                'server_order' => json_encode($order),
+                'updated_at' => now(),
+            ]);
+
+        return new JsonResponse([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function decodeServerOrder($value): array
+    {
+        for ($i = 0; $i < 3; $i++) {
+            if (is_array($value)) {
+                return array_values(array_filter($value, fn ($item) => is_string($item) && $item !== ''));
+            }
+
+            if (!is_string($value) || $value === '') {
+                return [];
+            }
+
+            $decoded = json_decode($value, true);
+            if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                return [];
+            }
+
+            $value = $decoded;
+        }
+
+        return [];
     }
 
     /**

@@ -36,6 +36,7 @@ use Pterodactyl\Notifications\SendPasswordReset as ResetPasswordNotification;
  * @property string $password
  * @property string|null $remember_token
  * @property string $language
+ * @property array|null $server_order
  * @property bool $root_admin
  * @property bool $use_totp
  * @property string|null $totp_secret
@@ -129,6 +130,7 @@ class User extends Model implements
         'name_last',
         'password',
         'language',
+        'server_order',
         'use_totp',
         'totp_secret',
         'totp_authenticated_at',
@@ -175,6 +177,7 @@ class User extends Model implements
         'password' => 'sometimes|nullable|string',
         'root_admin' => 'boolean',
         'language' => 'string',
+        'server_order' => 'nullable|string',
         'use_totp' => 'boolean',
         'totp_secret' => 'nullable|string',
     ];
@@ -199,8 +202,40 @@ class User extends Model implements
     public function toVueObject(): array
     {
         return Collection::make($this->toArray())->except(['id', 'external_id'])
-            ->merge(['identifier' => $this->identifier])
+            ->merge([
+                'identifier' => $this->identifier,
+                'server_order' => $this->normalizedServerOrder(),
+            ])
             ->toArray();
+    }
+
+    /**
+     * Normalize server_order whether it is stored as an array or a JSON string
+     * (including values that were accidentally double-encoded).
+     */
+    public function normalizedServerOrder(): array
+    {
+        // Read the raw attribute to avoid Eloquent JSON casts (problematic on MariaDB).
+        $value = $this->attributes['server_order'] ?? null;
+
+        for ($i = 0; $i < 3; $i++) {
+            if (is_array($value)) {
+                return array_values(array_filter($value, fn ($item) => is_string($item) && $item !== ''));
+            }
+
+            if (!is_string($value) || $value === '') {
+                return [];
+            }
+
+            $decoded = json_decode($value, true);
+            if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                return [];
+            }
+
+            $value = $decoded;
+        }
+
+        return [];
     }
 
     /**

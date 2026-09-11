@@ -3,6 +3,7 @@ import TitledGreyBox from '@/components/elements/TitledGreyBox';
 import { ServerContext } from '@/state/server';
 import { useStoreState } from 'easy-peasy';
 import RenameServerBox from '@/components/server/settings/RenameServerBox';
+import ServerIconBox from '@/components/server/settings/ServerIconBox';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import Can from '@/components/elements/Can';
 import ReinstallServerBox from '@/components/server/settings/ReinstallServerBox';
@@ -72,6 +73,9 @@ export default () => {
                 </div>
                 <div css={tw`w-full mt-6 md:flex-1 md:mt-0`}>
                     <Can action={'settings.rename'}>
+                        <div css={tw`mb-6 md:mb-10`}>
+                            <ServerIconBox />
+                        </div>
                         <div css={tw`mb-6 md:mb-10`}>
                             <RenameServerBox />
                         </div>

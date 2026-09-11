@@ -56,6 +56,7 @@ class ServerTransformer extends BaseClientTransformer
                 'port' => $server->node->daemonSFTP,
             ],
             'description' => $server->description,
+            'icon' => $server->icon,
             'limits' => [
                 'memory' => $server->memory,
                 'swap' => $server->swap,

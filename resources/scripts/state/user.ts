@@ -8,6 +8,7 @@ export interface UserData {
     language: string;
     rootAdmin: boolean;
     useTotp: boolean;
+    serverOrder?: string[];
     createdAt: Date;
     updatedAt: Date;
 }
