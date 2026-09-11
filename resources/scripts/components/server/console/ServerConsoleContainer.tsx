@@ -32,26 +32,26 @@ const ServerConsoleContainer = () => {
                         : 'This server is currently being transferred to another node and all actions are unavailable.'}
                 </Alert>
             )}
-            <div className={'grid grid-cols-4 gap-4 mb-4'}>
-                <div className={'hidden sm:block sm:col-span-2 lg:col-span-3 pr-4'}>
+            <div className={'grid grid-cols-1 gap-4 mb-4 sm:grid-cols-4'}>
+                <div className={'hidden sm:col-span-2 sm:block lg:col-span-3 sm:pr-4'}>
                     <h1 className={'font-header font-medium text-2xl text-gray-50 leading-relaxed line-clamp-1'}>
                         {name}
                     </h1>
                     <p className={'text-sm line-clamp-2'}>{description}</p>
                 </div>
-                <div className={'col-span-4 sm:col-span-2 lg:col-span-1 self-end'}>
+                <div className={'col-span-1 sm:col-span-2 lg:col-span-1 self-end'}>
                     <Can action={['control.start', 'control.stop', 'control.restart']} matchAny>
-                        <PowerButtons className={'flex sm:justify-end space-x-2'} />
+                        <PowerButtons className={'flex flex-wrap justify-stretch gap-2 sm:justify-end sm:space-x-2 sm:gap-0'} />
                     </Can>
                 </div>
             </div>
-            <div className={'grid grid-cols-4 gap-2 sm:gap-4 mb-4'}>
-                <div className={'flex col-span-4 lg:col-span-3'}>
+            <div className={'grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-4 mb-4'}>
+                <div className={'flex min-w-0 col-span-1 lg:col-span-3'}>
                     <Spinner.Suspense>
                         <Console />
                     </Spinner.Suspense>
                 </div>
-                <ServerDetailsBlock className={'col-span-4 lg:col-span-1 order-last lg:order-none'} />
+                <ServerDetailsBlock className={'col-span-1 lg:col-span-1 order-last lg:order-none'} />
             </div>
             <div className={'grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4'}>
                 <Spinner.Suspense>

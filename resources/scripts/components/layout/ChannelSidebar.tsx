@@ -1,4 +1,3 @@
-import { DISCORD_RAIL_WIDTH_PX } from '@/components/layout/ServerIconRail';
 import classNames from 'classnames';
 import React, { useEffect } from 'react';
 import { NavLink, useLocation, useRouteMatch } from 'react-router-dom';
@@ -11,7 +10,7 @@ import { ServerContext } from '@/state/server';
 import { useDiscordLayout } from '@/components/layout/DiscordLayoutContext';
 
 const channelLinkClass =
-    'flex items-center gap-1.5 rounded px-2 py-1.5 text-sm text-[#949ba4] no-underline transition-colors duration-150 hover:bg-[#35373c] hover:text-[#dbdee1]';
+    'flex min-h-[44px] items-center gap-1.5 rounded px-2 py-2 text-sm text-[#949ba4] no-underline transition-colors duration-150 hover:bg-[#35373c] hover:text-[#dbdee1]';
 
 const channelActiveClass = 'bg-[#404249] text-white hover:bg-[#404249] hover:text-white';
 
@@ -58,11 +57,11 @@ const ServerChannels = () => {
 
     return (
         <>
-            <div className={'border-b border-[#1e1f22] px-4 py-3'}>
+            <div className={'shrink-0 border-b border-[#1e1f22] px-4 py-3'}>
                 <p className={'truncate text-base font-semibold text-white'}>{name || id || 'Server'}</p>
                 <p className={'truncate text-xs text-[#949ba4]'}>Server channels</p>
             </div>
-            <nav className={'flex flex-col gap-0.5 p-2'}>
+            <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
                 {routes.server
                     .filter((route) => !!route.name)
                     .map((route) =>
@@ -96,11 +95,11 @@ const ServerChannels = () => {
 
 const AccountChannels = () => (
     <>
-        <div className={'border-b border-[#1e1f22] px-4 py-3'}>
+        <div className={'shrink-0 border-b border-[#1e1f22] px-4 py-3'}>
             <p className={'truncate text-base font-semibold text-white'}>Account</p>
             <p className={'truncate text-xs text-[#949ba4]'}>Settings</p>
         </div>
-        <nav className={'flex flex-col gap-0.5 p-2'}>
+        <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
             {routes.account
                 .filter((route) => !!route.name)
                 .map(({ path, name, exact = false }) => (
@@ -117,11 +116,11 @@ const DashboardChannels = () => {
 
     return (
         <>
-            <div className={'border-b border-[#1e1f22] px-4 py-3'}>
+            <div className={'shrink-0 border-b border-[#1e1f22] px-4 py-3'}>
                 <p className={'truncate text-base font-semibold text-white'}>{panelName}</p>
                 <p className={'truncate text-xs text-[#949ba4]'}>Home</p>
             </div>
-            <nav className={'flex flex-col gap-0.5 p-2'}>
+            <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
                 <ChannelLink to={'/'} exact>
                     Dashboard
                 </ChannelLink>
@@ -141,22 +140,39 @@ export default () => {
         setChannelsOpen(false);
     }, [location.pathname, setChannelsOpen]);
 
+    useEffect(() => {
+        if (!channelsOpen) {
+            return;
+        }
+
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, [channelsOpen]);
+
     return (
         <>
             <div
                 className={classNames(
-                    'fixed inset-0 z-30 bg-black/50 transition-opacity md:hidden',
+                    'fixed inset-y-0 right-0 z-30 bg-black/50 transition-opacity md:hidden',
+                    'left-16',
                     channelsOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
                 )}
                 onClick={() => setChannelsOpen(false)}
+                aria-hidden={!channelsOpen}
             />
             <aside
                 className={classNames(
-                    'relative z-10 flex h-full w-60 shrink-0 flex-col overflow-y-auto bg-[#2b2d31] transition-transform duration-200',
-                    'fixed inset-y-0 z-40 md:static md:z-10 md:translate-x-0',
-                    channelsOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+                    'flex h-full w-60 max-w-[calc(100vw-4rem)] shrink-0 flex-col bg-[#2b2d31] transition-transform duration-200 ease-out',
+                    // Mobile: overlay drawer beside the rail
+                    'fixed inset-y-0 left-16 z-40',
+                    // Desktop: in-flow column
+                    'md:static md:z-10 md:max-w-none md:translate-x-0',
+                    channelsOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0 md:shadow-none'
                 )}
-                style={{ left: DISCORD_RAIL_WIDTH_PX }}
             >
                 {serverMatch ? (
                     <ServerChannels />

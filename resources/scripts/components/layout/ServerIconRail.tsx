@@ -15,8 +15,8 @@ import Tooltip from '@/components/elements/tooltip/Tooltip';
 import Avatar from '@/components/Avatar';
 import SearchContainer from '@/components/dashboard/search/SearchContainer';
 
-const RAIL_WIDTH = 92;
-export const DISCORD_RAIL_WIDTH_PX = RAIL_WIDTH;
+/** Desktop rail width (px). Mobile uses Tailwind `w-16` (64px). */
+export const DISCORD_RAIL_WIDTH_PX = 72;
 
 const sortServersByOrder = (servers: Server[], order: string[]): Server[] => {
     if (!order.length) {
@@ -53,10 +53,11 @@ const RailScroll = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.625rem;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0 0.5rem;
+    overscroll-behavior: contain;
+    padding: 0 0.35rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -65,13 +66,18 @@ const RailScroll = styled.div`
         width: 0;
         height: 0;
     }
+
+    @media (min-width: 768px) {
+        gap: 0.75rem;
+        padding: 0 0.5rem;
+    }
 `;
 
 const iconCircle =
-    'relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-2xl font-semibold leading-none text-neutral-100 no-underline transition-colors duration-150 hover:bg-[#5865F2]';
+    'relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-lg font-semibold leading-none text-neutral-100 no-underline transition-colors duration-150 hover:bg-[#5865F2] md:h-14 md:w-14 md:text-2xl';
 
 const utilityCircle =
-    'flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-neutral-300 no-underline transition-colors duration-150 hover:bg-[#5865F2] hover:text-white';
+    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-neutral-300 no-underline transition-colors duration-150 hover:bg-[#5865F2] hover:text-white md:h-11 md:w-11';
 
 const ServerRailIcon = ({ server }: { server: Server }) => {
     const interval = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -109,7 +115,7 @@ const ServerRailIcon = ({ server }: { server: Server }) => {
                 )}
                 <span
                     className={classNames(
-                        'absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-[3px] border-[#1e1f22]',
+                        'absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#1e1f22] md:bottom-0.5 md:right-0.5 md:h-3.5 md:w-3.5 md:border-[3px]',
                         statusColor(status, suspended)
                     )}
                 />
@@ -139,30 +145,31 @@ export default () => {
 
     return (
         <aside
-            className={'relative z-50 flex h-full shrink-0 flex-col items-center bg-[#1e1f22] py-3'}
-            style={{ width: RAIL_WIDTH }}
+            className={
+                'relative z-50 flex h-full w-16 shrink-0 flex-col items-center bg-[#1e1f22] py-2 md:w-[72px] md:py-3'
+            }
         >
             <SpinnerOverlay visible={isLoggingOut} fixed />
             <Tooltip placement={'right'} content={'Home'}>
                 <NavLink
                     to={'/'}
                     exact
-                    className={classNames(iconCircle, 'mb-2 text-neutral-200')}
+                    className={classNames(iconCircle, 'mb-1.5 text-neutral-200 md:mb-2')}
                     activeClassName={'!bg-[#5865F2] !text-white'}
                 >
-                    <FontAwesomeIcon icon={faHome} className={'text-xl'} />
+                    <FontAwesomeIcon icon={faHome} className={'text-base md:text-xl'} />
                 </NavLink>
             </Tooltip>
-            <div className={'mb-3 h-0.5 w-10 rounded-full bg-[#35363c]'} />
+            <div className={'mb-2 h-0.5 w-8 rounded-full bg-[#35363c] md:mb-3 md:w-10'} />
             <RailScroll>
                 {servers.map((server) => (
                     <ServerRailIcon key={server.uuid} server={server} />
                 ))}
             </RailScroll>
-            <div className={'mt-2 flex flex-col items-center gap-2.5 border-t border-[#35363c] pt-3'}>
+            <div className={'mt-2 flex flex-col items-center gap-2 border-t border-[#35363c] pt-2 md:gap-2.5 md:pt-3'}>
                 <div
                     className={
-                        '[&_.navigation-link]:flex [&_.navigation-link]:h-12 [&_.navigation-link]:w-12 [&_.navigation-link]:cursor-pointer [&_.navigation-link]:items-center [&_.navigation-link]:justify-center [&_.navigation-link]:overflow-hidden [&_.navigation-link]:rounded-full [&_.navigation-link]:text-neutral-300 [&_.navigation-link]:hover:bg-[#5865F2] [&_.navigation-link]:hover:text-white'
+                        '[&_.navigation-link]:flex [&_.navigation-link]:h-10 [&_.navigation-link]:w-10 [&_.navigation-link]:cursor-pointer [&_.navigation-link]:items-center [&_.navigation-link]:justify-center [&_.navigation-link]:overflow-hidden [&_.navigation-link]:rounded-full [&_.navigation-link]:text-neutral-300 [&_.navigation-link]:hover:bg-[#5865F2] [&_.navigation-link]:hover:text-white md:[&_.navigation-link]:h-11 md:[&_.navigation-link]:w-11'
                     }
                 >
                     <SearchContainer />
@@ -182,7 +189,11 @@ export default () => {
                     </NavLink>
                 </Tooltip>
                 <Tooltip placement={'right'} content={'Sign Out'}>
-                    <button type={'button'} onClick={onTriggerLogout} className={classNames(utilityCircle, 'hover:bg-red-500')}>
+                    <button
+                        type={'button'}
+                        onClick={onTriggerLogout}
+                        className={classNames(utilityCircle, 'hover:bg-red-500')}
+                    >
                         <FontAwesomeIcon icon={faSignOutAlt} />
                     </button>
                 </Tooltip>
