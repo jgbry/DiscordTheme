@@ -1,19 +1,106 @@
-[![Logo Image](https://cdn.pterodactyl.io/logos/new/pterodactyl_logo.png)](https://pterodactyl.io)
+# Discord Theme
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/pterodactyl/panel/ci.yaml?label=Tests&style=for-the-badge&branch=1.0-develop)
-![Discord](https://img.shields.io/discord/122900397965705216?label=Discord&logo=Discord&logoColor=white&style=for-the-badge)
-![GitHub Releases](https://img.shields.io/github/downloads/pterodactyl/panel/latest/total?style=for-the-badge)
-![GitHub contributors](https://img.shields.io/github/contributors/pterodactyl/panel?style=for-the-badge)
+DiscordTheme is a free and open source [Pterodactyl theme](https://pterodactyl.io) with a Discord-inspired layout.
 
-# Pterodactyl Panel
+Based on **Pterodactyl Panel v1.15.1**.
 
-Pterodactyl® is a free, open-source game server management panel built with PHP, React, and Go. Designed with security
-in mind, Pterodactyl runs all game servers in isolated Docker containers while exposing a beautiful and intuitive
-UI to end users.
+### Features
 
-Stop settling for less. Make game servers a first class citizen on your platform.
+- Discord-style **server icon rail** and **channel sidebar** for navigation
+- **Edit mode** — drag-and-drop server reorder (saved per user)
+- **Custom server icons** — upload from Settings → Server Icon
+- Console **stat cards** and **charts** styled to match the theme
 
-![Image](https://cdn.pterodactyl.io/site-assets/pterodactyl_v1_demo.gif)
+## Installation
+
+This will update your panel to the latest DiscordTheme release (Pterodactyl **v1.15.1** base).
+
+<details>
+<summary>Upgrade PHP</summary>
+
+Before proceeding, ensure PHP **8.2+** (8.3 recommended):
+
+```bash
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:ondrej/php
+sudo apt update
+sudo apt install -y php8.3
+php -v
+```
+
+</details>
+
+### Enter Maintenance Mode
+
+```bash
+cd /var/www/pterodactyl
+php artisan down
+```
+
+### Download the theme
+
+```bash
+curl -L https://github.com/jgbry/DiscordTheme/releases/latest/download/panel.tar.gz | tar -xzv
+```
+
+```bash
+chmod -R 755 storage/* bootstrap/cache
+```
+
+### Update Dependencies
+
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+### Clear Compiled Template Cache
+
+```bash
+php artisan view:clear
+php artisan config:clear
+```
+
+### Database Updates
+
+```bash
+php artisan migrate --seed --force
+php artisan storage:link
+```
+
+### Set Permissions
+
+```bash
+# If using NGINX or Apache (not on CentOS):
+chown -R www-data:www-data /var/www/pterodactyl/*
+
+# If using NGINX on CentOS:
+chown -R nginx:nginx /var/www/pterodactyl/*
+
+# If using Apache on CentOS:
+chown -R apache:apache /var/www/pterodactyl/*
+```
+
+### Restarting Queue Workers
+
+```bash
+php artisan queue:restart
+```
+
+### Exit Maintenance Mode
+
+```bash
+php artisan up
+```
+
+## Building from source
+
+```bash
+yarn install
+yarn build:production
+```
+
+See also [BUILDING.md](./BUILDING.md).
 
 ## Documentation
 
@@ -22,51 +109,10 @@ Stop settling for less. Make game servers a first class citizen on your platform
 * [Community Guides](https://pterodactyl.io/community/about.html)
 * Or, get additional help [via Discord](https://discord.gg/pterodactyl)
 
-## Sponsors
-
-I would like to extend my sincere thanks to the following sponsors for helping fund Pterodactyl's development.
-[Interested in becoming a sponsor?](https://github.com/sponsors/pterodactyl)
-
-| Company                                                                           | About                                                                                                                                                                                                                                           |
-|-----------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**Infraly, LLC**](https://infraly.co/)                                           | Infraly is an infrastructure company powering the next generation of online services. Through their brands, Infraly delivers cutting-edge solutions across multiple markets. Their vertically integrated approach provides unmatched performance, scalability, and reliability, giving our customers full control.                                                                                     |
-| [**Hosturly**](https://hosturly.com/)                                             | Hosturly is an enterprise hosting provider. They provide cost-effective, high-performance, and reliable services, including VPS, Web, Dedicated, and Colocation.                                                                                |
-| [**Physgun**](https://physgun.com/)                                               | Physgun is a game server hosting provider. Most providers rent rack space and rebrand a panel. At Physgun, they engineer the performance, write the features, and staff the support. Physgun truly is game hosting perfected!                   |
-| [**WISP**](https://wisp.gg/)                                                      | WISP is an industry-leading SaaS platform for game server management, designed for hosting companies, gaming organizations, and enthusiasts. WISP combines modern, intuitive interfaces with powerful tools, making server deployment and administration seamless, scalable, and efficient.                                                                                                                 |
-| [**Buildurly**](https://buildurly.com/)                                           | Buildurly is a hardware procurement company. They deliver tailored, enterprise-grade hardware solutions designed around your unique needs. From sourcing to delivery, Buildurly's white-glove service ensures a seamless, worry-free, professional experience.                                                                                                                                          |
-| [**indifferent broccoli**](https://indifferentbroccoli.com/)                      | indifferent broccoli is a game server hosting and rental company. With them, you get top-notch computer power for your gaming sessions. They destroy lag, latency, and complexity--letting you focus on the fun stuff.                         |
-
-### Supported Games
-
-Pterodactyl supports a wide variety of games by utilizing Docker containers to isolate each instance. This gives
-you the power to run game servers without bloating machines with a host of additional dependencies.
-
-Some of our core supported games include:
-
-* Minecraft — including Paper, Sponge, Bungeecord, Waterfall, and more
-* Rust
-* Terraria
-* Teamspeak
-* Mumble
-* Team Fortress 2
-* Counter Strike: Global Offensive
-* Garry's Mod
-* ARK: Survival Evolved
-
-In addition to our standard nest of supported games, our community is constantly pushing the limits of this software
-and there are plenty more games available provided by the community. Some of these games include:
-
-* Factorio
-* San Andreas: MP
-* Pocketmine MP
-* Squad
-* Xonotic
-* Starmade
-* Discord ATLBot, and most other Node.js/Python discord bots
-* [and many more...](https://eggs.pterodactyl.io)
-
 ## License
 
-Pterodactyl® Copyright © 2015 - 2022 Dane Everitt and contributors.
+Pterodactyl® Copyright © 2015 - 2023 Dane Everitt and contributors.
 
-Code released under the [MIT License](./LICENSE.md).
+> DiscordTheme is not affiliated with Pterodactyl® Panel or its contributors.
+
+Pterodactyl code released under the [MIT License](./LICENSE.md).
