@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import classNames from 'classnames';
 import { NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -85,10 +86,8 @@ const popIn = keyframes`
     }
 `;
 
-const MenuFlyout = styled.div<{ $open: boolean; $top: number; $left: number }>`
+const MenuFlyout = styled.div<{ $open: boolean }>`
     position: fixed;
-    top: ${(props) => props.$top}px;
-    left: ${(props) => props.$left}px;
     z-index: 80;
     display: flex;
     align-items: center;
@@ -102,7 +101,7 @@ const MenuFlyout = styled.div<{ $open: boolean; $top: number; $left: number }>`
     pointer-events: ${(props) => (props.$open ? 'auto' : 'none')};
     opacity: ${(props) => (props.$open ? 1 : 0)};
     transform: ${(props) => (props.$open ? 'translateX(0) scale(1)' : 'translateX(-10px) scale(0.94)')};
-    transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1), visibility 180ms;
+    transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
     visibility: ${(props) => (props.$open ? 'visible' : 'hidden')};
 
     ${(props) =>
@@ -134,7 +133,6 @@ const MenuFlyout = styled.div<{ $open: boolean; $top: number; $left: number }>`
             }
         `}
 `;
-
 
 const menuItem =
     'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-[#dbdee1] no-underline transition-colors duration-150 hover:bg-[#5865F2] hover:text-white';
@@ -196,57 +194,59 @@ const RailActionsMenu = ({
 }) => {
     const [open, setOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [coords, setCoords] = useState({ top: 0, left: 0 });
-    const wrapRef = useRef<HTMLDivElement | null>(null);
-    const buttonRef = useRef<HTMLButtonElement | null>(null);
+    const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+    const anchorRef = useRef<HTMLDivElement | null>(null);
     const flyoutRef = useRef<HTMLDivElement | null>(null);
 
-    const getAlignedCoords = () => {
-        const button = buttonRef.current;
-        if (!button) {
-            return { top: 0, left: 0 };
+    const measure = () => {
+        const anchor = anchorRef.current;
+        if (!anchor) {
+            return null;
         }
 
-        const rect = button.getBoundingClientRect();
+        const rect = anchor.getBoundingClientRect();
         const flyoutHeight = flyoutRef.current?.offsetHeight || 48;
 
         return {
-            // Vertically center the flyout on the trigger icon
             top: Math.round(rect.top + rect.height / 2 - flyoutHeight / 2),
             left: Math.round(rect.right + 10),
         };
     };
 
-    const updateCoords = () => {
-        setCoords(getAlignedCoords());
+    const openMenu = () => {
+        const next = measure();
+        if (!next) {
+            return;
+        }
+        setCoords(next);
+        setOpen(true);
+        requestAnimationFrame(() => {
+            const refined = measure();
+            if (refined) {
+                setCoords(refined);
+            }
+        });
     };
+
+    const closeMenu = () => setOpen(false);
 
     const toggleOpen = () => {
         if (open) {
-            setOpen(false);
+            closeMenu();
             return;
         }
-
-        // Measure before opening so the first paint is already aligned
-        const nextCoords = getAlignedCoords();
-        setCoords(nextCoords);
-        setOpen(true);
-
-        // Re-measure after paint once flyout has real height
-        requestAnimationFrame(() => {
-            setCoords(getAlignedCoords());
-        });
+        openMenu();
     };
 
     useEventListener('keydown', (e: KeyboardEvent) => {
         if (['input', 'textarea'].indexOf(((e.target as HTMLElement).tagName || 'input').toLowerCase()) < 0) {
             if (!searchOpen && e.metaKey && e.key.toLowerCase() === '/') {
                 setSearchOpen(true);
-                setOpen(false);
+                closeMenu();
             }
         }
         if (e.key === 'Escape') {
-            setOpen(false);
+            closeMenu();
         }
     });
 
@@ -255,16 +255,21 @@ const RailActionsMenu = ({
             return;
         }
 
-        updateCoords();
-
         const onPointerDown = (event: MouseEvent | TouchEvent) => {
             const target = event.target as Node;
-            if (wrapRef.current && !wrapRef.current.contains(target)) {
-                setOpen(false);
+            const inAnchor = !!anchorRef.current?.contains(target);
+            const inFlyout = !!flyoutRef.current?.contains(target);
+            if (!inAnchor && !inFlyout) {
+                closeMenu();
             }
         };
 
-        const onReposition = () => updateCoords();
+        const onReposition = () => {
+            const next = measure();
+            if (next) {
+                setCoords(next);
+            }
+        };
 
         document.addEventListener('mousedown', onPointerDown);
         document.addEventListener('touchstart', onPointerDown);
@@ -279,79 +284,78 @@ const RailActionsMenu = ({
         };
     }, [open]);
 
-    return (
-        <div ref={wrapRef} className={'relative flex items-center justify-center'}>
-            {searchOpen && <SearchModal appear visible={searchOpen} onDismissed={() => setSearchOpen(false)} />}
-            <Tooltip placement={'right'} content={open ? 'Close menu' : 'Menu'}>
-                <button
-                    ref={buttonRef}
-                    type={'button'}
-                    aria-expanded={open}
-                    aria-label={'Open user menu'}
-                    onClick={toggleOpen}
-                    className={classNames(
-                        'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-neutral-200 transition-all duration-200 md:h-12 md:w-12',
-                        open ? '!bg-[#5865F2] text-white rotate-90' : 'hover:bg-[#5865F2] hover:text-white'
-                    )}
-                >
-                    <FontAwesomeIcon icon={open ? faTimes : faEllipsisV} />
-                </button>
-            </Tooltip>
+    const flyout =
+        coords &&
+        createPortal(
             <MenuFlyout
                 ref={flyoutRef}
                 $open={open}
-                $top={coords.top}
-                $left={coords.left}
                 role={'menu'}
                 aria-hidden={!open}
+                style={{ top: coords.top, left: coords.left }}
             >
-                <Tooltip placement={'top'} content={'Search'}>
-                    <button
-                        type={'button'}
-                        role={'menuitem'}
-                        className={menuItem}
-                        onClick={() => {
-                            setSearchOpen(true);
-                            setOpen(false);
-                        }}
-                    >
-                        <FontAwesomeIcon icon={faSearch} />
-                    </button>
-                </Tooltip>
+                <button
+                    type={'button'}
+                    role={'menuitem'}
+                    title={'Search'}
+                    className={menuItem}
+                    onClick={() => {
+                        setSearchOpen(true);
+                        closeMenu();
+                    }}
+                >
+                    <FontAwesomeIcon icon={faSearch} />
+                </button>
                 {rootAdmin && (
-                    <Tooltip placement={'top'} content={'Admin'}>
-                        <a href={'/admin'} rel={'noreferrer'} role={'menuitem'} className={menuItem}>
-                            <FontAwesomeIcon icon={faCogs} />
-                        </a>
-                    </Tooltip>
+                    <a href={'/admin'} rel={'noreferrer'} role={'menuitem'} title={'Admin'} className={menuItem}>
+                        <FontAwesomeIcon icon={faCogs} />
+                    </a>
                 )}
-                <Tooltip placement={'top'} content={'Account'}>
-                    <NavLink
-                        to={'/account'}
-                        role={'menuitem'}
-                        className={menuItem}
-                        activeClassName={'!bg-[#5865F2] !text-white'}
-                        onClick={() => setOpen(false)}
-                    >
-                        <span className={'flex h-6 w-6 items-center justify-center overflow-hidden rounded-full'}>
-                            <Avatar.User />
-                        </span>
-                    </NavLink>
-                </Tooltip>
-                <Tooltip placement={'top'} content={'Sign Out'}>
-                    <button
-                        type={'button'}
-                        role={'menuitem'}
-                        className={classNames(menuItem, 'hover:!bg-red-500')}
-                        onClick={() => {
-                            setOpen(false);
-                            onLogout();
-                        }}
-                    >
-                        <FontAwesomeIcon icon={faSignOutAlt} />
-                    </button>
-                </Tooltip>
-            </MenuFlyout>
+                <NavLink
+                    to={'/account'}
+                    role={'menuitem'}
+                    title={'Account'}
+                    className={menuItem}
+                    activeClassName={'!bg-[#5865F2] !text-white'}
+                    onClick={closeMenu}
+                >
+                    <span className={'flex h-6 w-6 items-center justify-center overflow-hidden rounded-full'}>
+                        <Avatar.User />
+                    </span>
+                </NavLink>
+                <button
+                    type={'button'}
+                    role={'menuitem'}
+                    title={'Sign Out'}
+                    className={classNames(menuItem, 'hover:!bg-red-500')}
+                    onClick={() => {
+                        closeMenu();
+                        onLogout();
+                    }}
+                >
+                    <FontAwesomeIcon icon={faSignOutAlt} />
+                </button>
+            </MenuFlyout>,
+            document.body
+        );
+
+    return (
+        <div ref={anchorRef} className={'relative flex items-center justify-center'}>
+            {searchOpen && <SearchModal appear visible={searchOpen} onDismissed={() => setSearchOpen(false)} />}
+            <button
+                type={'button'}
+                aria-expanded={open}
+                aria-label={open ? 'Close menu' : 'Open menu'}
+                title={'Menu'}
+                onClick={toggleOpen}
+                className={classNames(
+                    'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-neutral-200 transition-all duration-200 md:h-12 md:w-12',
+                    open ? '!bg-[#5865F2] text-white rotate-90' : 'hover:bg-[#5865F2] hover:text-white'
+                )}
+            >
+                <FontAwesomeIcon icon={open ? faTimes : faEllipsisV} />
+            </button>
+            {flyout}
         </div>
     );
 };
