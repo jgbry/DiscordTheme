@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCogs, faHome, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { faCogs, faEllipsisV, faHome, faSearch, faSignOutAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useStoreState } from 'easy-peasy';
 import useSWR from 'swr';
-import styled from 'styled-components/macro';
+import styled, { keyframes, css } from 'styled-components/macro';
 import getServers from '@/api/getServers';
 import { Server } from '@/api/server/getServer';
 import getServerResourceUsage, { ServerPowerState } from '@/api/server/getServerResourceUsage';
@@ -13,7 +13,8 @@ import http from '@/api/http';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import Tooltip from '@/components/elements/tooltip/Tooltip';
 import Avatar from '@/components/Avatar';
-import SearchContainer from '@/components/dashboard/search/SearchContainer';
+import SearchModal from '@/components/dashboard/search/SearchModal';
+import useEventListener from '@/plugins/useEventListener';
 
 /** Desktop rail width (px). Mobile uses Tailwind `w-16` (64px). */
 export const DISCORD_RAIL_WIDTH_PX = 72;
@@ -73,11 +74,74 @@ const RailScroll = styled.div`
     }
 `;
 
+const popIn = keyframes`
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(-12px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1);
+    }
+`;
+
+const MenuFlyout = styled.div<{ $open: boolean; $top: number; $left: number }>`
+    position: fixed;
+    top: ${(props) => props.$top}px;
+    left: ${(props) => props.$left}px;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem;
+    border-radius: 9999px;
+    background: #2b2d31;
+    border: 1px solid #1e1f22;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    transform-origin: left center;
+    pointer-events: ${(props) => (props.$open ? 'auto' : 'none')};
+    opacity: ${(props) => (props.$open ? 1 : 0)};
+    transform: ${(props) =>
+        props.$open ? 'translateY(-50%) scale(1)' : 'translateY(-50%) translateX(-12px) scale(0.92)'};
+    transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1), visibility 180ms;
+    visibility: ${(props) => (props.$open ? 'visible' : 'hidden')};
+
+    ${(props) =>
+        props.$open &&
+        css`
+            animation: ${popIn} 220ms cubic-bezier(0.22, 1, 0.36, 1);
+        `}
+
+    & > * {
+        opacity: ${(props) => (props.$open ? 1 : 0)};
+        transform: ${(props) => (props.$open ? 'translateX(0)' : 'translateX(-6px)')};
+        transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    ${(props) =>
+        props.$open &&
+        css`
+            & > *:nth-child(1) {
+                transition-delay: 40ms;
+            }
+            & > *:nth-child(2) {
+                transition-delay: 70ms;
+            }
+            & > *:nth-child(3) {
+                transition-delay: 100ms;
+            }
+            & > *:nth-child(4) {
+                transition-delay: 130ms;
+            }
+        `}
+`;
+
+
+const menuItem =
+    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-[#dbdee1] no-underline transition-colors duration-150 hover:bg-[#5865F2] hover:text-white';
+
 const iconCircle =
     'relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-lg font-semibold leading-none text-neutral-100 no-underline transition-colors duration-150 hover:bg-[#5865F2] md:h-14 md:w-14 md:text-2xl';
-
-const utilityCircle =
-    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-neutral-300 no-underline transition-colors duration-150 hover:bg-[#5865F2] hover:text-white md:h-11 md:w-11';
 
 const ServerRailIcon = ({ server }: { server: Server }) => {
     const interval = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -124,6 +188,152 @@ const ServerRailIcon = ({ server }: { server: Server }) => {
     );
 };
 
+const RailActionsMenu = ({
+    rootAdmin,
+    onLogout,
+}: {
+    rootAdmin: boolean;
+    onLogout: () => void;
+}) => {
+    const [open, setOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
+    const wrapRef = useRef<HTMLDivElement | null>(null);
+    const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+    const updateCoords = () => {
+        const button = buttonRef.current;
+        if (!button) {
+            return;
+        }
+        const rect = button.getBoundingClientRect();
+        setCoords({
+            top: rect.top + rect.height / 2,
+            left: rect.right + 10,
+        });
+    };
+
+    const toggleOpen = () => {
+        setOpen((value) => {
+            const next = !value;
+            if (next) {
+                updateCoords();
+            }
+            return next;
+        });
+    };
+
+    useEventListener('keydown', (e: KeyboardEvent) => {
+        if (['input', 'textarea'].indexOf(((e.target as HTMLElement).tagName || 'input').toLowerCase()) < 0) {
+            if (!searchOpen && e.metaKey && e.key.toLowerCase() === '/') {
+                setSearchOpen(true);
+                setOpen(false);
+            }
+        }
+        if (e.key === 'Escape') {
+            setOpen(false);
+        }
+    });
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        updateCoords();
+
+        const onPointerDown = (event: MouseEvent | TouchEvent) => {
+            const target = event.target as Node;
+            if (wrapRef.current && !wrapRef.current.contains(target)) {
+                setOpen(false);
+            }
+        };
+
+        const onReposition = () => updateCoords();
+
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('touchstart', onPointerDown);
+        window.addEventListener('resize', onReposition);
+        window.addEventListener('scroll', onReposition, true);
+
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('touchstart', onPointerDown);
+            window.removeEventListener('resize', onReposition);
+            window.removeEventListener('scroll', onReposition, true);
+        };
+    }, [open]);
+
+    return (
+        <div ref={wrapRef} className={'relative flex items-center justify-center'}>
+            {searchOpen && <SearchModal appear visible={searchOpen} onDismissed={() => setSearchOpen(false)} />}
+            <Tooltip placement={'right'} content={open ? 'Close menu' : 'Menu'}>
+                <button
+                    ref={buttonRef}
+                    type={'button'}
+                    aria-expanded={open}
+                    aria-label={'Open user menu'}
+                    onClick={toggleOpen}
+                    className={classNames(
+                        'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#313338] text-neutral-200 transition-all duration-200 md:h-12 md:w-12',
+                        open ? '!bg-[#5865F2] text-white rotate-90' : 'hover:bg-[#5865F2] hover:text-white'
+                    )}
+                >
+                    <FontAwesomeIcon icon={open ? faTimes : faEllipsisV} />
+                </button>
+            </Tooltip>
+            <MenuFlyout $open={open} $top={coords.top} $left={coords.left} role={'menu'} aria-hidden={!open}>
+                <Tooltip placement={'top'} content={'Search'}>
+                    <button
+                        type={'button'}
+                        role={'menuitem'}
+                        className={menuItem}
+                        onClick={() => {
+                            setSearchOpen(true);
+                            setOpen(false);
+                        }}
+                    >
+                        <FontAwesomeIcon icon={faSearch} />
+                    </button>
+                </Tooltip>
+                {rootAdmin && (
+                    <Tooltip placement={'top'} content={'Admin'}>
+                        <a href={'/admin'} rel={'noreferrer'} role={'menuitem'} className={menuItem}>
+                            <FontAwesomeIcon icon={faCogs} />
+                        </a>
+                    </Tooltip>
+                )}
+                <Tooltip placement={'top'} content={'Account'}>
+                    <NavLink
+                        to={'/account'}
+                        role={'menuitem'}
+                        className={menuItem}
+                        activeClassName={'!bg-[#5865F2] !text-white'}
+                        onClick={() => setOpen(false)}
+                    >
+                        <span className={'flex h-6 w-6 items-center justify-center overflow-hidden rounded-full'}>
+                            <Avatar.User />
+                        </span>
+                    </NavLink>
+                </Tooltip>
+                <Tooltip placement={'top'} content={'Sign Out'}>
+                    <button
+                        type={'button'}
+                        role={'menuitem'}
+                        className={classNames(menuItem, 'hover:!bg-red-500')}
+                        onClick={() => {
+                            setOpen(false);
+                            onLogout();
+                        }}
+                    >
+                        <FontAwesomeIcon icon={faSignOutAlt} />
+                    </button>
+                </Tooltip>
+            </MenuFlyout>
+        </div>
+    );
+};
+
 export default () => {
     const rootAdmin = useStoreState((state) => state.user.data!.rootAdmin);
     const serverOrder = useStoreState((state) => state.user.data?.serverOrder) || [];
@@ -146,7 +356,7 @@ export default () => {
     return (
         <aside
             className={
-                'relative z-50 flex h-full w-16 shrink-0 flex-col items-center bg-[#1e1f22] py-2 md:w-[72px] md:py-3'
+                'relative z-50 flex h-full w-16 shrink-0 flex-col items-center overflow-visible bg-[#1e1f22] py-2 md:w-[72px] md:py-3'
             }
         >
             <SpinnerOverlay visible={isLoggingOut} fixed />
@@ -166,37 +376,8 @@ export default () => {
                     <ServerRailIcon key={server.uuid} server={server} />
                 ))}
             </RailScroll>
-            <div className={'mt-2 flex flex-col items-center gap-2 border-t border-[#35363c] pt-2 md:gap-2.5 md:pt-3'}>
-                <div
-                    className={
-                        '[&_.navigation-link]:flex [&_.navigation-link]:h-10 [&_.navigation-link]:w-10 [&_.navigation-link]:cursor-pointer [&_.navigation-link]:items-center [&_.navigation-link]:justify-center [&_.navigation-link]:overflow-hidden [&_.navigation-link]:rounded-full [&_.navigation-link]:text-neutral-300 [&_.navigation-link]:hover:bg-[#5865F2] [&_.navigation-link]:hover:text-white md:[&_.navigation-link]:h-11 md:[&_.navigation-link]:w-11'
-                    }
-                >
-                    <SearchContainer />
-                </div>
-                {rootAdmin && (
-                    <Tooltip placement={'right'} content={'Admin'}>
-                        <a href={'/admin'} rel={'noreferrer'} className={utilityCircle}>
-                            <FontAwesomeIcon icon={faCogs} />
-                        </a>
-                    </Tooltip>
-                )}
-                <Tooltip placement={'right'} content={'Account'}>
-                    <NavLink to={'/account'} className={utilityCircle} activeClassName={'!bg-[#5865F2] !text-white'}>
-                        <span className={'flex h-6 w-6 items-center justify-center overflow-hidden rounded-full'}>
-                            <Avatar.User />
-                        </span>
-                    </NavLink>
-                </Tooltip>
-                <Tooltip placement={'right'} content={'Sign Out'}>
-                    <button
-                        type={'button'}
-                        onClick={onTriggerLogout}
-                        className={classNames(utilityCircle, 'hover:bg-red-500')}
-                    >
-                        <FontAwesomeIcon icon={faSignOutAlt} />
-                    </button>
-                </Tooltip>
+            <div className={'relative z-50 mt-2 flex items-center justify-center border-t border-[#35363c] pt-2 md:pt-3'}>
+                <RailActionsMenu rootAdmin={rootAdmin} onLogout={onTriggerLogout} />
             </div>
         </aside>
     );
