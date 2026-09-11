@@ -77,11 +77,11 @@ const RailScroll = styled.div`
 const popIn = keyframes`
     from {
         opacity: 0;
-        transform: translateY(-50%) translateX(-12px) scale(0.92);
+        transform: translateX(-10px) scale(0.94);
     }
     to {
         opacity: 1;
-        transform: translateY(-50%) translateX(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 `;
 
@@ -101,15 +101,14 @@ const MenuFlyout = styled.div<{ $open: boolean; $top: number; $left: number }>`
     transform-origin: left center;
     pointer-events: ${(props) => (props.$open ? 'auto' : 'none')};
     opacity: ${(props) => (props.$open ? 1 : 0)};
-    transform: ${(props) =>
-        props.$open ? 'translateY(-50%) scale(1)' : 'translateY(-50%) translateX(-12px) scale(0.92)'};
+    transform: ${(props) => (props.$open ? 'translateX(0) scale(1)' : 'translateX(-10px) scale(0.94)')};
     transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1), visibility 180ms;
     visibility: ${(props) => (props.$open ? 'visible' : 'hidden')};
 
     ${(props) =>
         props.$open &&
         css`
-            animation: ${popIn} 220ms cubic-bezier(0.22, 1, 0.36, 1);
+            animation: ${popIn} 200ms cubic-bezier(0.22, 1, 0.36, 1);
         `}
 
     & > * {
@@ -200,26 +199,42 @@ const RailActionsMenu = ({
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const wrapRef = useRef<HTMLDivElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
+    const flyoutRef = useRef<HTMLDivElement | null>(null);
 
-    const updateCoords = () => {
+    const getAlignedCoords = () => {
         const button = buttonRef.current;
         if (!button) {
-            return;
+            return { top: 0, left: 0 };
         }
+
         const rect = button.getBoundingClientRect();
-        setCoords({
-            top: rect.top + rect.height / 2,
-            left: rect.right + 10,
-        });
+        const flyoutHeight = flyoutRef.current?.offsetHeight || 48;
+
+        return {
+            // Vertically center the flyout on the trigger icon
+            top: Math.round(rect.top + rect.height / 2 - flyoutHeight / 2),
+            left: Math.round(rect.right + 10),
+        };
+    };
+
+    const updateCoords = () => {
+        setCoords(getAlignedCoords());
     };
 
     const toggleOpen = () => {
-        setOpen((value) => {
-            const next = !value;
-            if (next) {
-                updateCoords();
-            }
-            return next;
+        if (open) {
+            setOpen(false);
+            return;
+        }
+
+        // Measure before opening so the first paint is already aligned
+        const nextCoords = getAlignedCoords();
+        setCoords(nextCoords);
+        setOpen(true);
+
+        // Re-measure after paint once flyout has real height
+        requestAnimationFrame(() => {
+            setCoords(getAlignedCoords());
         });
     };
 
@@ -282,7 +297,14 @@ const RailActionsMenu = ({
                     <FontAwesomeIcon icon={open ? faTimes : faEllipsisV} />
                 </button>
             </Tooltip>
-            <MenuFlyout $open={open} $top={coords.top} $left={coords.left} role={'menu'} aria-hidden={!open}>
+            <MenuFlyout
+                ref={flyoutRef}
+                $open={open}
+                $top={coords.top}
+                $left={coords.left}
+                role={'menu'}
+                aria-hidden={!open}
+            >
                 <Tooltip placement={'top'} content={'Search'}>
                     <button
                         type={'button'}
