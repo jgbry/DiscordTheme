@@ -45,13 +45,13 @@ const options: ChartOptions<'line'> = {
             type: 'linear',
             grid: {
                 display: true,
-                color: theme('colors.gray.700'),
+                color: '#35373c',
                 drawBorder: false,
             },
             ticks: {
                 display: true,
                 count: 3,
-                color: theme('colors.gray.200'),
+                color: '#949ba4',
                 font: {
                     family: theme('fontFamily.sans'),
                     size: 11,
