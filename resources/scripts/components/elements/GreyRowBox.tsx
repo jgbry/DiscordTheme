@@ -16,7 +16,7 @@ export default styled.div<{ $hoverable?: boolean }>`
     `};
 
     & .icon {
-        ${tw`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full p-0 sm:h-16 sm:w-16`};
+        ${tw`flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full p-0 sm:h-16 sm:w-16`};
         background-color: #1e1f22;
         color: #b5bac1;
     }
