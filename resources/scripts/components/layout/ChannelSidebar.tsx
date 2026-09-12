@@ -10,11 +10,9 @@ import { ServerContext } from '@/state/server';
 import { useDiscordLayout } from '@/components/layout/DiscordLayoutContext';
 
 const channelLinkClass =
-    'flex w-full min-h-[44px] items-center gap-1.5 rounded px-2 py-2 text-sm text-[#949ba4] no-underline transition-colors duration-150 hover:bg-[#35373c] hover:text-[#dbdee1]';
+    'flex min-h-[44px] items-center gap-1.5 rounded px-2 py-2 text-sm text-[#949ba4] no-underline transition-colors duration-150 hover:bg-[#35373c] hover:text-[#dbdee1]';
 
 const channelActiveClass = 'bg-[#404249] text-white hover:bg-[#404249] hover:text-white';
-
-const navClass = 'flex w-full flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-2 py-2';
 
 const ChannelLink = ({
     to,
@@ -63,17 +61,15 @@ const ServerChannels = () => {
                 <p className={'truncate text-base font-semibold text-white'}>{name || id || 'Server'}</p>
                 <p className={'truncate text-xs text-[#949ba4]'}>Server channels</p>
             </div>
-            <nav className={navClass}>
+            <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
                 {routes.server
                     .filter((route) => !!route.name)
                     .map((route) =>
                         route.permission ? (
                             <Can key={route.path} action={route.permission} matchAny>
-                                <div className={'w-full'}>
-                                    <ChannelLink to={to(route.path)} exact={route.exact}>
-                                        {route.name}
-                                    </ChannelLink>
-                                </div>
+                                <ChannelLink to={to(route.path)} exact={route.exact}>
+                                    {route.name}
+                                </ChannelLink>
                             </Can>
                         ) : (
                             <ChannelLink key={route.path} to={to(route.path)} exact={route.exact}>
@@ -89,7 +85,7 @@ const ServerChannels = () => {
                         className={channelLinkClass}
                     >
                         <FontAwesomeIcon icon={faExternalLinkAlt} className={'text-xs opacity-70'} />
-                        <span className={'truncate'}>Admin</span>
+                        <span>Admin</span>
                     </a>
                 )}
             </nav>
@@ -103,7 +99,7 @@ const AccountChannels = () => (
             <p className={'truncate text-base font-semibold text-white'}>Account</p>
             <p className={'truncate text-xs text-[#949ba4]'}>Settings</p>
         </div>
-        <nav className={navClass}>
+        <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
             {routes.account
                 .filter((route) => !!route.name)
                 .map(({ path, name, exact = false }) => (
@@ -124,7 +120,7 @@ const DashboardChannels = () => {
                 <p className={'truncate text-base font-semibold text-white'}>{panelName}</p>
                 <p className={'truncate text-xs text-[#949ba4]'}>Home</p>
             </div>
-            <nav className={navClass}>
+            <nav className={'flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2'}>
                 <ChannelLink to={'/'} exact>
                     Dashboard
                 </ChannelLink>
@@ -174,19 +170,17 @@ export default () => {
                     // Mobile: overlay drawer beside the rail
                     'fixed inset-y-0 left-16 z-40',
                     // Desktop: in-flow column
-                    'md:static md:z-10 md:w-60 md:max-w-none md:translate-x-0',
+                    'md:static md:z-10 md:max-w-none md:translate-x-0',
                     channelsOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0 md:shadow-none'
                 )}
             >
-                <div className={'flex min-h-0 w-full flex-1 flex-col'}>
-                    {serverMatch ? (
-                        <ServerChannels />
-                    ) : isAccount ? (
-                        <AccountChannels />
-                    ) : (
-                        <DashboardChannels />
-                    )}
-                </div>
+                {serverMatch ? (
+                    <ServerChannels />
+                ) : isAccount ? (
+                    <AccountChannels />
+                ) : (
+                    <DashboardChannels />
+                )}
             </aside>
         </>
     );
