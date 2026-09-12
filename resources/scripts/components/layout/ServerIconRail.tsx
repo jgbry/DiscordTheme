@@ -75,10 +75,14 @@ const RailScroll = styled.div`
     }
 `;
 
+/** Matches ChannelSidebar `w-60` (15rem). */
+const CHANNEL_SIDEBAR_WIDTH_PX = 240;
+const FLYOUT_SIDE_GAP_PX = 8;
+
 const popIn = keyframes`
     from {
         opacity: 0;
-        transform: translateX(-10px) scale(0.94);
+        transform: translateX(-10px) scale(0.96);
     }
     to {
         opacity: 1;
@@ -89,10 +93,12 @@ const popIn = keyframes`
 const MenuFlyout = styled.div<{ $open: boolean }>`
     position: fixed;
     z-index: 80;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem;
+    justify-content: space-between;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
     border-radius: 9999px;
     background: #2b2d31;
     border: 1px solid #1e1f22;
@@ -100,7 +106,7 @@ const MenuFlyout = styled.div<{ $open: boolean }>`
     transform-origin: left center;
     pointer-events: ${(props) => (props.$open ? 'auto' : 'none')};
     opacity: ${(props) => (props.$open ? 1 : 0)};
-    transform: ${(props) => (props.$open ? 'translateX(0) scale(1)' : 'translateX(-10px) scale(0.94)')};
+    transform: ${(props) => (props.$open ? 'translateX(0) scale(1)' : 'translateX(-10px) scale(0.96)')};
     transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
     visibility: ${(props) => (props.$open ? 'visible' : 'hidden')};
 
@@ -194,7 +200,7 @@ const RailActionsMenu = ({
 }) => {
     const [open, setOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
     const anchorRef = useRef<HTMLDivElement | null>(null);
     const flyoutRef = useRef<HTMLDivElement | null>(null);
 
@@ -205,11 +211,15 @@ const RailActionsMenu = ({
         }
 
         const rect = anchor.getBoundingClientRect();
-        const flyoutHeight = flyoutRef.current?.offsetHeight || 48;
+        const flyoutHeight = flyoutRef.current?.offsetHeight || 52;
+        const rail = anchor.closest('aside');
+        const railRight = rail ? rail.getBoundingClientRect().right : rect.right;
 
         return {
             top: Math.round(rect.top + rect.height / 2 - flyoutHeight / 2),
-            left: Math.round(rect.right + 10),
+            // Align with the channel sidebar column, with a small side gap
+            left: Math.round(railRight + FLYOUT_SIDE_GAP_PX),
+            width: CHANNEL_SIDEBAR_WIDTH_PX - FLYOUT_SIDE_GAP_PX * 2,
         };
     };
 
@@ -292,7 +302,7 @@ const RailActionsMenu = ({
                 $open={open}
                 role={'menu'}
                 aria-hidden={!open}
-                style={{ top: coords.top, left: coords.left }}
+                style={{ top: coords.top, left: coords.left, width: coords.width }}
             >
                 <button
                     type={'button'}
