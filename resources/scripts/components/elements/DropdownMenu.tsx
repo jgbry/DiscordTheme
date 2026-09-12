@@ -18,7 +18,6 @@ export const DropdownButtonRow = styled.button<{ danger?: boolean }>`
 `;
 
 interface State {
-    posX: number;
     visible: boolean;
 }
 
@@ -26,7 +25,6 @@ class DropdownMenu extends React.PureComponent<Props, State> {
     menu = createRef<HTMLDivElement>();
 
     state: State = {
-        posX: 0,
         visible: false,
     };
 
@@ -34,13 +32,10 @@ class DropdownMenu extends React.PureComponent<Props, State> {
         this.removeListeners();
     }
 
-    componentDidUpdate(prevProps: Readonly<Props>, prevState: Readonly<State>) {
-        const menu = this.menu.current;
-
-        if (this.state.visible && !prevState.visible && menu) {
+    componentDidUpdate(_: Readonly<Props>, prevState: Readonly<State>) {
+        if (this.state.visible && !prevState.visible) {
             document.addEventListener('click', this.windowListener);
             document.addEventListener('contextmenu', this.contextMenuListener);
-            menu.style.left = `${Math.round(this.state.posX - menu.clientWidth)}px`;
         }
 
         if (!this.state.visible && prevState.visible) {
@@ -55,7 +50,7 @@ class DropdownMenu extends React.PureComponent<Props, State> {
 
     onClickHandler = (e: React.MouseEvent<any, MouseEvent>) => {
         e.preventDefault();
-        this.triggerMenu(e.clientX);
+        this.triggerMenu();
     };
 
     contextMenuListener = () => this.setState({ visible: false });
@@ -76,15 +71,15 @@ class DropdownMenu extends React.PureComponent<Props, State> {
         }
     };
 
-    triggerMenu = (posX: number) =>
+    /** Optional unused arg kept for FileDropdownMenu context-menu callers. */
+    triggerMenu = (_posX?: number) =>
         this.setState((s) => ({
-            posX: !s.visible ? posX : s.posX,
             visible: !s.visible,
         }));
 
     render() {
         return (
-            <div>
+            <div css={tw`relative`}>
                 {this.props.renderToggle(this.onClickHandler)}
                 <Fade timeout={150} in={this.state.visible} unmountOnExit>
                     <div
@@ -94,7 +89,7 @@ class DropdownMenu extends React.PureComponent<Props, State> {
                             this.setState({ visible: false });
                         }}
                         style={{ width: '12rem' }}
-                        css={tw`absolute bg-white p-2 rounded border border-neutral-700 shadow-lg text-neutral-500 z-50`}
+                        css={tw`absolute right-0 top-full mt-1 bg-white p-2 rounded border border-neutral-700 shadow-lg text-neutral-500 z-50`}
                     >
                         {this.props.children}
                     </div>
